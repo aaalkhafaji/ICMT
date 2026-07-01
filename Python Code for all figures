@@ -1,0 +1,252 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import os
+import zipfile
+import graphviz
+from matplotlib.patches import Ellipse
+
+# Create a directory to store the figures
+output_dir = "figures"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Set academic plotting style
+plt.rcParams.update({
+    'font.size': 12,
+    'axes.labelsize': 14,
+    'axes.titlesize': 16,
+    'legend.fontsize': 12,
+    'figure.figsize': (8, 6),
+    'figure.autolayout': True
+})
+
+print("Generating Figure 1: Clifford Basis...")
+# ==========================================
+# Figure 1: Clifford Basis (3D Multivector Space)
+# ==========================================
+fig1 = plt.figure()
+ax1 = fig1.add_subplot(111, projection='3d')
+
+# Define axes limits
+ax1.set_xlim([0, 1])
+ax1.set_ylim([0, 1])
+ax1.set_zlim([0, 1])
+
+# Plot the 3 bivector planes (APT4, APT5, APT6)
+# xy plane (e1e2 - Red/Green)
+ax1.plot_surface(np.array([[0, 1], [0, 1]]), np.array([[0, 0], [1, 1]]), np.array([[0, 0], [0, 0]]), color='yellow', alpha=0.1)
+# yz plane (e2e3 - Green/Blue)
+ax1.plot_surface(np.array([[0, 0], [0, 0]]), np.array([[0, 1], [0, 1]]), np.array([[0, 0], [1, 1]]), color='cyan', alpha=0.15)
+# xz plane (e1e3 - Red/Blue)
+ax1.plot_surface(np.array([[0, 1], [0, 1]]), np.array([[0, 0], [0, 0]]), np.array([[0, 0], [1, 1]]), color='magenta', alpha=0.1)
+
+# Generate a high-risk UI cluster (Cyan-ish)
+np.random.seed(42)
+cluster_x = np.random.normal(0.1, 0.05, 50)
+cluster_y = np.random.normal(0.8, 0.1, 50)
+cluster_z = np.random.normal(0.85, 0.1, 50)
+ax1.scatter(cluster_x, cluster_y, cluster_z, c='c', marker='o', s=30, label='Cyan UI Cluster (High Hazard)')
+
+# Show projection onto e2e3 plane (APT4)
+ax1.plot([0.1, 0], [0.8, 0.8], [0.85, 0.85], color='r', linestyle='--', linewidth=2)
+ax1.scatter([0], [0.8], [0.85], c='r', marker='x', s=50, label='Projection on $e_2e_3$ Plane')
+
+ax1.set_xlabel('$e_1$ (Red)')
+ax1.set_ylabel('$e_2$ (Green)')
+ax1.set_zlabel('$e_3$ (Blue)')
+ax1.set_title('Chromatic Multivector Space $Cl_{3,0}(\mathbb{R})$')
+ax1.legend(loc='upper left', bbox_to_anchor=(0.0, 1.0))
+fig1.savefig(f'{output_dir}/clifford_basis.pdf')
+plt.close(fig1)
+
+print("Generating Figure 2: Rotor Dynamics...")
+# ==========================================
+# Figure 2: Rotor Dynamics (Hazard Bivector)
+# ==========================================
+fig2 = plt.figure()
+ax2 = fig2.add_subplot(111, projection='3d')
+ax2.set_xlim([0, 1.2]); ax2.set_ylim([0, 1.2]); ax2.set_zlim([0, 1.2])
+
+# Origin and vectors
+origin = [0, 0, 0]
+u_vec = [0.2, 0.9, 0.9] # Original vector
+u_rot = [0.2, 1.1, 0.5] # Rotated vector (magnitude preserved on yz, shifted angle)
+
+# Plot Risk Bivector Plane (e2e3)
+y = np.linspace(0, 1.2, 10)
+z = np.linspace(0, 1.2, 10)
+Y, Z = np.meshgrid(y, z)
+X = np.zeros_like(Y)
+ax2.plot_surface(X, Y, Z, color='cyan', alpha=0.3)
+
+# Plot vectors
+ax2.quiver(*origin, *u_vec, color='r', label='Initial State $\mathbf{U}$', arrow_length_ratio=0.1, linewidth=2)
+ax2.quiver(*origin, *u_rot, color='b', label='Rotated State $\mathbf{U}\'$', arrow_length_ratio=0.1, linewidth=2)
+
+# Draw rotation arc
+theta = np.linspace(0, np.pi/4, 20)
+arc_y = 0.9 * np.cos(theta) + 0.9 * np.sin(theta)
+arc_z = 0.9 * np.cos(theta) - 0.9 * np.sin(theta)
+ax2.plot(np.zeros_like(theta)+0.2, arc_y, arc_z, color='k', linestyle='--', linewidth=2, label='Rotor Action $R$')
+
+ax2.set_xlabel('$e_1$')
+ax2.set_ylabel('$e_2$')
+ax2.set_zlabel('$e_3$')
+ax2.set_title('Hazard-Driven Rotor $R = \exp(-\\theta \mathbf{B}_\mathcal{H} / 2)$')
+ax2.legend()
+fig2.savefig(f'{output_dir}/rotor_dynamics.pdf')
+plt.close(fig2)
+
+print("Generating Figure 3: ICMT Reconstruction...")
+# ==========================================
+# Figure 3: 1D ICMT Reconstruction
+# ==========================================
+fig3, axs = plt.subplots(4, 1, figsize=(8, 10), sharex=True)
+x = np.linspace(0, 100, 400)
+
+# Generate square wave graphic with some noise
+base_signal = np.where((x > 30) & (x < 70), 0.9, 0.1)
+u_green = base_signal + np.random.normal(0, 0.02, 400)
+u_blue = base_signal + np.random.normal(0, 0.02, 400)
+
+# Panel A: Uncompensated
+axs[0].plot(x, u_green, 'g', label='Green ($e_2$)')
+axs[0].plot(x, u_blue, 'b', label='Blue ($e_3$)')
+axs[0].set_title('A: Uncompensated 1D Spatial Cross-Section (High Hazard)')
+axs[0].legend(loc='upper right')
+
+# Panel B: Rotated
+u_rot_primary = (u_green + u_blue) / np.sqrt(2) # Aligned hazard axis
+u_rot_secondary = (u_green - u_blue) / np.sqrt(2) # Safe axis
+axs[1].plot(x, u_rot_primary, 'purple', label='Hazard Axis (Rotated)')
+axs[1].plot(x, u_rot_secondary, 'gray', label='Orthogonal Safe Axis')
+axs[1].set_title('B: Spin-Projected State Space (R $\mathbf{U}$ $\\tilde{R}$)')
+axs[1].legend(loc='upper right')
+
+# Panel C: Morphological Opening (Erosion effect)
+from scipy.ndimage import minimum_filter, maximum_filter
+eroded_primary = minimum_filter(u_rot_primary, size=20)
+axs[2].plot(x, eroded_primary, 'purple', label='Eroded Hazard Axis')
+axs[2].fill_between(x, u_rot_primary, eroded_primary, color='red', alpha=0.3, label='Annihilated Thermal Payload')
+axs[2].set_title('C: Infimal Convolution in Rotated Space')
+axs[2].legend(loc='upper right')
+
+# Panel D: Reconstructed (Reverse Rotor)
+# Edges reconstructed via dilation (simplified here by adding back high-frequency edges)
+edges = u_rot_primary - minimum_filter(u_rot_primary, size=5)
+reconstructed_primary = eroded_primary + edges 
+recon_green = (reconstructed_primary + u_rot_secondary) / np.sqrt(2)
+recon_blue = (reconstructed_primary - u_rot_secondary) / np.sqrt(2)
+
+axs[3].plot(x, recon_green, 'g', label='Compensated Green')
+axs[3].plot(x, recon_blue, 'b', label='Compensated Blue')
+axs[3].set_title('D: Reconstructed Output (Bijective Geometric Filtering)')
+axs[3].legend(loc='upper right')
+
+plt.tight_layout()
+fig3.savefig(f'{output_dir}/icmt_reconstruction.pdf')
+plt.close(fig3)
+
+print("Generating Figure 4: Tweedie Dominance...")
+# ==========================================
+# Figure 4: Tweedie Dominance
+# ==========================================
+fig4, ax4 = plt.subplots(figsize=(8, 6))
+mu = np.linspace(0, 1.2, 100)
+p = 1.5
+
+# Uncompensated loss
+loss_uncomp = mu**p
+# ICMT compensated loss (capped by anti-extensive erosion)
+loss_icmt = np.where(mu < 0.6, mu**p, 0.6**p + 0.1*(mu - 0.6))
+
+ax4.plot(mu, loss_uncomp, 'r--', linewidth=2.5, label='Uncompensated Signal (Exponential Loss)')
+ax4.plot(mu, loss_icmt, 'b-', linewidth=2.5, label='ICMT Output (Bounded Loss)')
+
+# Highlight dominance region
+ax4.fill_between(mu, loss_icmt, loss_uncomp, where=(loss_uncomp > loss_icmt), 
+                 color='green', alpha=0.15, label='Tweedie Forecast Dominance Region')
+
+ax4.axvline(x=0.6, color='k', linestyle=':', label='Actuarial Safety Threshold ($\mathbf{U}_{safe}$)')
+ax4.set_xlabel('Projected Hazard Magnitude $|| \mathcal{P}_{\mathbf{B}_\mathcal{H}}[\mathbf{U}] ||$')
+ax4.set_ylabel('Projected Bregman Divergence (Actuarial Penalty)')
+ax4.set_title('Bivector-Projected Tweedie Dominance ($p=1.5$)')
+ax4.legend()
+ax4.grid(True, alpha=0.3)
+fig4.savefig(f'{output_dir}/tweedie_dominance.pdf')
+plt.close(fig4)
+
+print("Generating Figure 5: CIELAB Balance...")
+# ==========================================
+# Figure 5: CIELAB EDF Balance Property
+# ==========================================
+fig5, ax5 = plt.subplots(figsize=(7, 7))
+
+# Center of a Cyan color in a*, b*
+center_a, center_b = -30, -15
+
+# Draw JND Ellipse (MacAdam / CIEDE2000 approximation)
+jnd_ellipse = Ellipse((center_a, center_b), width=10, height=14, angle=30, 
+                      edgecolor='green', facecolor='none', linewidth=2, linestyle='--',
+                      label='JND Boundary ($\Delta E \le 1.5$)')
+ax5.add_patch(jnd_ellipse)
+
+# Raw pixels (spread out slightly)
+raw_a = np.random.normal(center_a + 1, 1.5, 30)
+raw_b = np.random.normal(center_b + 1, 2.0, 30)
+ax5.scatter(raw_a, raw_b, c='r', marker='o', label='Raw State (Uncompensated)', s=40)
+
+# ICMT pixels (shifted but balanced, staying inside the ellipse)
+comp_a = np.random.normal(center_a - 1.5, 1.2, 30)
+comp_b = np.random.normal(center_b - 1.5, 1.8, 30)
+ax5.scatter(comp_a, comp_b, c='b', marker='x', label='ICMT State (Physically Degraded, Perceptually Balanced)', s=50)
+
+ax5.set_xlim(-45, -15)
+ax5.set_ylim(-35, 5)
+ax5.set_xlabel('Chromaticity $a^*$ (Green-Red)')
+ax5.set_ylabel('Chromaticity $b^*$ (Blue-Yellow)')
+ax5.set_title('Geometric EDF Balance Property in CIELAB Space')
+ax5.legend(loc='upper right')
+ax5.grid(True, alpha=0.3)
+fig5.savefig(f'{output_dir}/cielab_balance.pdf')
+plt.close(fig5)
+
+print("Generating Figure 6: DPU Architecture Block Diagram...")
+# ==========================================
+# Figure 6: Hardware Architecture (Graphviz)
+# ==========================================
+dot = graphviz.Digraph(format='pdf', engine='dot')
+dot.attr(rankdir='LR', size='8,5')
+dot.attr('node', shape='box', style='filled', fillcolor='lightblue', fontname='Helvetica', fontsize='12')
+
+dot.node('IN', 'Streaming Video\n(Raster Scan)', shape='cylinder', fillcolor='lightgray')
+dot.node('BUF', 'Line Buffer Window\n(3x3 Spatial Topology)')
+dot.node('LUT', 'LUT-based Rotor Generator $R$\n(Bivector Space)', fillcolor='lightyellow')
+dot.node('DEL', 'Delay Buffer\n(Multivector State $\mathbf{U}$)')
+dot.node('FWD', 'Spin-Projected Infimal\nConvolution Engine ($\mathcal{C}_{\ominus}$)', fillcolor='lightgreen')
+dot.node('INV', 'Inverse Rotor \&\nAdjoint Dilation ($\mathcal{C}_{\oplus}$)', fillcolor='lightgreen')
+dot.node('OUT', 'Compensated Display Output', shape='cylinder', fillcolor='lightgray')
+
+dot.edges([('IN', 'BUF'), ('BUF', 'LUT'), ('BUF', 'DEL')])
+dot.edge('LUT', 'FWD', label=' Rotor $R$')
+dot.edge('DEL', 'FWD', label=' State $\mathbf{U}$')
+dot.edge('FWD', 'INV', label=' Eroded State $\mathbf{V}\'$')
+dot.edge('LUT', 'INV', label=' Reverse Rotor $\\tilde{R}$')
+dot.edge('INV', 'OUT', label=' Output $\mathbf{\hat{U}}$')
+
+dot.render(f'{output_dir}/dpu_architecture', cleanup=True)
+
+print("Packaging figures into a ZIP file...")
+# ==========================================
+# Zip the Output Files
+# ==========================================
+zip_filename = "icmt_figures.zip"
+with zipfile.ZipFile(zip_filename, 'w') as zipf:
+    for root, dirs, files in os.walk(output_dir):
+        for file in files:
+            if file.endswith(".pdf"):
+                zipf.write(os.path.join(root, file), arcname=file)
+
+print(f"Success! All figures generated and compressed into '{zip_filename}'.")
+print("You can download the ZIP file using the Colab file browser on the left.")
