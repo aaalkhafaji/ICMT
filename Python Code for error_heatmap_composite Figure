@@ -1,0 +1,70 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage.color import rgb2lab, deltaE_ciede2000
+import os
+import shutil
+from google.colab import files
+
+# 1. Create output directory
+output_dir = "heatmap_results"
+os.makedirs(output_dir, exist_ok=True)
+
+# 2. Create a synthetic high-hazard UI Crop (e.g., Bright Cyan on Dark Background)
+crop_size = 128
+img_orig = np.zeros((crop_size, crop_size, 3), dtype=np.float32)
+# Cyan square in the center (Red=0, Green=1, Blue=1)
+img_orig[32:96, 32:96, 1] = 1.0 
+img_orig[32:96, 32:96, 2] = 1.0
+
+# 3. Simulate Baselines (REPLACE WITH YOUR ACTUAL ARRAYS IF YOU HAVE THEM)
+# Baseline ABL: Uniformly dims, but messes up edges due to poor scaling
+img_baseline = img_orig * 0.70
+img_baseline[30:98, 30:98, 0] = 0.1 # Simulating color bleeding/tearing at the edge
+
+# ICMT Operator: Erodes the center to save power, but perfectly preserves edges
+img_icmt = np.copy(img_orig)
+img_icmt[36:92, 36:92, 1:] = 0.60 # The "hollowed out" thermal payload
+
+# 4. Calculate CIEDE2000 Delta E Heatmaps
+lab_orig = rgb2lab(img_orig)
+lab_baseline = rgb2lab(img_baseline)
+lab_icmt = rgb2lab(img_icmt)
+
+de_baseline = deltaE_ciede2000(lab_orig, lab_baseline)
+de_icmt = deltaE_ciede2000(lab_orig, lab_icmt)
+
+# 5. Plot the 2x2 Composite Figure
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+
+# Top-Left: Original
+axs[0, 0].imshow(img_orig)
+axs[0, 0].set_title("Original High-Hazard UI Crop")
+axs[0, 0].axis('off')
+
+# Top-Right: ICMT Output
+axs[0, 1].imshow(img_icmt)
+axs[0, 1].set_title("ICMT Output (Hollowed Payload)")
+axs[0, 1].axis('off')
+
+# Bottom-Left: Baseline Heatmap
+im1 = axs[1, 0].imshow(de_baseline, cmap='turbo', vmin=0, vmax=5.0)
+axs[1, 0].set_title("Baseline $\Delta E_{00}$ Error (Tearing)")
+axs[1, 0].axis('off')
+
+# Bottom-Right: ICMT Heatmap
+im2 = axs[1, 1].imshow(de_icmt, cmap='turbo', vmin=0, vmax=5.0)
+axs[1, 1].set_title("ICMT $\Delta E_{00}$ Error (Bounded)")
+axs[1, 1].axis('off')
+
+# Add a shared colorbar for the heatmaps
+cbar_ax = fig.add_axes([0.15, 0.05, 0.7, 0.03]) # [left, bottom, width, height]
+fig.colorbar(im2, cax=cbar_ax, orientation='horizontal', label='CIEDE2000 $\Delta E_{00}$ Error (Red/Yellow = Perceptible Shift)')
+
+plt.subplots_adjust(bottom=0.15) # Make room for colorbar
+plt.savefig(f"{output_dir}/error_heatmap_composite.pdf", bbox_inches='tight', dpi=300)
+plt.close()
+
+# 6. Zip and download
+zip_filename = "ICMT_Heatmap_Results"
+shutil.make_archive(zip_filename, 'zip', output_dir)
+files.download(f"{zip_filename}.zip")
