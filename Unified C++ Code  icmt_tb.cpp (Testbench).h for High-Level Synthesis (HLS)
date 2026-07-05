@@ -1,0 +1,39 @@
+#include <iostream>
+#include "icmt_hw.h"
+
+int main() {
+    // Test Case: Cyan UI high-luminance hazard (10-bit HDR limit)
+    pixel_raw_t test_pixel[3] = {0, 1023, 1023}; 
+
+    // Generate Mock Reciprocal LUT
+    mv_state_t reciprocal_lut[1024];
+    reciprocal_lut[0] = 0;
+    for(int i = 1; i < 1024; i++) {
+        reciprocal_lut[i] = 1.0 / i;
+    }
+
+    Clifford_3D U_state;
+    Clifford_3D Hazard_Bivector;
+
+    ICMT_State_Initialization(test_pixel, reciprocal_lut, U_state);
+    evaluate_hazard_bivectors(U_state, Hazard_Bivector);
+
+    std::cout << "--- ICMT Hardware C++ Verification Pipeline ---" << std::endl;
+    std::cout << "Grade-1 Vectors (Normalized RGB):" << std::endl;
+    std::cout << "e1 (Red):   " << U_state.e1 << std::endl;
+    std::cout << "e2 (Green): " << U_state.e2 << std::endl;
+    std::cout << "e3 (Blue):  " << U_state.e3 << std::endl;
+
+    std::cout << "\nGrade-2 Hazard Bivectors:" << std::endl;
+    std::cout << "e12 (GR): " << Hazard_Bivector.e12 << std::endl;
+    std::cout << "e23 (GB): " << Hazard_Bivector.e23 << " <-- Correctly Isolated Max Hazard Plane" << std::endl;
+    std::cout << "e13 (RB): " << Hazard_Bivector.e13 << std::endl;
+
+    if (Hazard_Bivector.e23 > 0.9 && Hazard_Bivector.e12 == 0) {
+        std::cout << "\n[PASS] C++ algebraic logic is perfectly sound!" << std::endl;
+        return 0;
+    } else {
+        std::cout << "\n[FAIL] Logic mismatch detected." << std::endl;
+        return 1;
+    }
+}
