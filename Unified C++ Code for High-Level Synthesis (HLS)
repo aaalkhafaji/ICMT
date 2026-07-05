@@ -1,0 +1,29 @@
+#ifndef ICMT_HW_H
+#define ICMT_HW_H
+
+// For High-Level Synthesis (HLS), uncomment the following line and use ap_fixed.
+// #include <ap_fixed.h>
+// typedef ap_ufixed<10, 10> pixel_raw_t;
+// typedef ap_fixed<16, 2> mv_state_t;
+// typedef ap_fixed<32, 3> mv_bivector_t;
+
+// Standard types for CPU/Colab verification
+typedef float pixel_raw_t;
+typedef float mv_state_t;
+typedef float mv_bivector_t;
+
+struct Clifford_3D {
+    mv_state_t scalar;
+    mv_state_t e1;     // Red
+    mv_state_t e2;     // Green
+    mv_state_t e3;     // Blue
+    mv_bivector_t e12; // APT5 (Green-Red Covariance)
+    mv_bivector_t e23; // APT4 (Green-Blue Covariance)
+    mv_bivector_t e13; // APT6 (Red-Blue Covariance)
+    mv_bivector_t I;   // Pseudoscalar
+};
+
+void ICMT_State_Initialization(pixel_raw_t P_RGB[3], const mv_state_t reciprocal_lut[1024], Clifford_3D &U);
+void evaluate_hazard_bivectors(Clifford_3D &U, Clifford_3D &B_H);
+
+#endif
