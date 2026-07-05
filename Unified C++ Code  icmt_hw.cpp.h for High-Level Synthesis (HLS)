@@ -1,0 +1,29 @@
+#include "icmt_hw.h"
+
+void ICMT_State_Initialization(pixel_raw_t P_RGB[3], const mv_state_t reciprocal_lut[1024], Clifford_3D &U) {
+    // #pragma HLS PIPELINE II=1
+    
+    U.scalar = 0.0;
+    
+    // Map colors via pre-computed reciprocal multiplication (Zero-DSP Division Bypass)
+    U.e1 = P_RGB[0] * reciprocal_lut[(int)P_RGB[0]];
+    U.e2 = P_RGB[1] * reciprocal_lut[(int)P_RGB[1]];
+    U.e3 = P_RGB[2] * reciprocal_lut[(int)P_RGB[2]];
+    
+    U.e12 = 0.0; 
+    U.e23 = 0.0; 
+    U.e13 = 0.0; 
+    U.I = 0.0;
+}
+
+void evaluate_hazard_bivectors(Clifford_3D &U, Clifford_3D &B_H) {
+    // #pragma HLS PIPELINE II=1
+    // #pragma HLS BIND_OP variable=B_H.e23 op=mul impl=fabric
+    // #pragma HLS BIND_OP variable=B_H.e12 op=mul impl=fabric
+    // #pragma HLS BIND_OP variable=B_H.e13 op=mul impl=fabric
+
+    // Outer product computations (Actuarial Pixel Transforms)
+    B_H.e12 = U.e1 * U.e2;
+    B_H.e23 = U.e2 * U.e3; 
+    B_H.e13 = U.e1 * U.e3;
+}
